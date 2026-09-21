@@ -1,0 +1,31 @@
+name: Auto Update Briefs & Exams
+
+on:
+  schedule:
+    # Runs every 12 hours (at 00:00 UTC and 12:00 UTC)
+    - cron: '0 0,12 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-scrapers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Update Daily Briefs
+        run: node scripts/updateDailyBriefs.js
+
+      - name: Update Exam Calendar
+        run: node scripts/updateExams.js
+        
