@@ -453,11 +453,7 @@ fetchBriefs();
           {selectedBrief?.title}
         </Text>
 
-        <View style={{ height: 1, backgroundColor: '#282828', marginBottom: 16 }} />
-
-        <Text style={{ color: '#D1D1D1', fontSize: 15, lineHeight: 24, marginBottom: 20 }}>
-          {selectedBrief?.summary}
-        </Text>
+        
 
         {/* Simple Dismiss Button */}
           <TouchableOpacity 

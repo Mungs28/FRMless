@@ -22,7 +22,7 @@ async function fetchDailyBriefs() {
       fullText = fullText.replace(/(<([^>]+)>)/gi, "").trim();
       
       return {
-        title: item.title.substring(0, 100),
+        title: item.title,
         // Only append '...' if the text actually exceeds 500 characters
         summary: fullText.length > 500 ? fullText.substring(0, 500) + '...' : fullText,
         link: item.link,
