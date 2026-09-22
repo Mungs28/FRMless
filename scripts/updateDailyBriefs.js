@@ -10,17 +10,18 @@ async function fetchDailyBriefs() {
 
   try {
     const parser = new Parser();
-    // Google News RSS specifically filtered for Indian Banking, RBI, & Current Affairs
-    const feed = await parser.parseURL('https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en');
     
-    // Extract the top 3 most recent headlines to fit inside your hero card module
+    // Targeted RSS search specifically for Indian Current Affairs, GK, and Exams
+    const feed = await parser.parseURL('https://news.google.com/rss/search?q=Current+Affairs+OR+General+Knowledge+India&hl=en-IN&gl=IN&ceid=IN:en');
+    
+    // Extract the top 20 most recent headlines
     const briefs = feed.items.slice(0, 20).map(item => {
-      // Clean up the title by removing the publisher name at the end (e.g., " - LiveMint")
+      // Clean up the title by removing the publisher name at the end
       const cleanTitle = item.title.split(' - ')[0];
       
       return {
-        title: cleanTitle.substring(0, 80), 
-        summary: item.contentSnippet ? item.contentSnippet.substring(0, 100) + '...' : 'Tap to read the full policy update.',
+        title: cleanTitle.substring(0, 100),
+        summary: item.contentSnippet ? item.contentSnippet.substring(0, 500) + '...' : 'Tap to read the full GK/Current Affairs update.',
         link: item.link,
         published_date: new Date(item.pubDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
       };

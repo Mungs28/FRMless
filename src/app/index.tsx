@@ -17,7 +17,7 @@ import {
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  View
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -50,6 +50,44 @@ export default function App() {
   const isTablet = width >= 768;
 
   // Local State
+  const startLiveQuiz = async () => {
+    try {
+      console.log("Fetching live questions from the internet...");
+      
+      const response = await fetch('https://opentdb.com/api.php?amount=10&type=multiple');
+      const data = await response.json();
+      
+      // Helper function to clean HTML entities from text and answers
+      const decodeHtml = (html) => {
+        return html
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, "&")
+          .replace(/&rsquo;/g, "'")
+          .replace(/&ldquo;/g, '"')
+          .replace(/&rdquo;/g, '"');
+      };
+
+      const formattedQuestions = data.results.map((q) => {
+        const decodedCorrect = decodeHtml(q.correct_answer);
+        const decodedIncorrects = q.incorrect_answers.map(ans => decodeHtml(ans));
+        const allOptions = [...decodedIncorrects, decodedCorrect].sort(() => Math.random() - 0.5);
+
+        return {
+          question: decodeHtml(q.question),
+          options: allOptions,
+          correctAnswer: decodedCorrect
+        };
+      });
+
+      console.log("Internet Quiz Ready with Cleaned Answers:", formattedQuestions);
+      setLiveQuestions(formattedQuestions);
+      setActiveTab('quiz');
+      
+    } catch (error) {
+      console.error("Failed to fetch internet quiz:", error);
+    }
+  };
   const [documents, setDocuments] = useState([]);
   const [streak, setStreak] = useState(12);
   const [liveQuestions, setLiveQuestions] = useState(FALLBACK_QUESTIONS);
@@ -58,7 +96,7 @@ export default function App() {
   // --- LIVE EXAMS (FROM SUPABASE) ---
   const [upcomingExams, setUpcomingExams] = useState([]);
   const [isLoadingExams, setIsLoadingExams] = useState(true);
-
+const [isProfileVisible, setProfileVisible] = useState(false);
   // Fetch Live Exams
   useEffect(() => {
     const fetchLiveExams = async () => {
@@ -225,13 +263,19 @@ fetchBriefs();
     }, 800);
   };
 
-  const handleAnswer = (selectedIndex) => {
-    if (selectedIndex === liveQuestions[currentQuestion].correctAnswer) setScore(score + 1);
+  const handleAnswer = (selectedOption) => {
+    const currentQ = liveQuestions[currentQuestion];
     
+    const isCorrect = 
+      selectedOption === currentQ.correctAnswer || 
+      currentQ.options[selectedOption] === currentQ.correctAnswer;
+
+    if (isCorrect) {
+      setScore(score + 1);
+    }
+
     if (currentQuestion + 1 < liveQuestions.length) {
       setCurrentQuestion(currentQuestion + 1);
-      setPaths([]);
-      setCurrentPath([]);
     } else {
       setShowResult(true);
       setStreak(prev => prev + 1);
@@ -244,9 +288,6 @@ fetchBriefs();
     setCurrentQuestion(0);
     setScore(0);
     setShowResult(false);
-    setShowScratchpad(false);
-    setPaths([]);
-    setCurrentPath([]);
   };
 
   if (!isAppReady) {
@@ -331,7 +372,7 @@ fetchBriefs();
             </View>
           </View>
 
-          <TouchableOpacity onPress={() => setActiveTab('quiz')} activeOpacity={0.9} style={[styles.heroCard, { marginTop: 24 }]}>
+          <TouchableOpacity onPress={startLiveQuiz} activeOpacity={0.9} style={[styles.heroCard, { marginTop: 24 }]}>
             <View style={styles.heroTopRow}>
               <View style={styles.badge}><Text style={styles.badgeText}>⚡ {streak}-DAY STREAK</Text></View>
               <Text style={styles.heroTimer}>10 Qs Ready</Text>
@@ -418,39 +459,15 @@ fetchBriefs();
           {selectedBrief?.summary}
         </Text>
 
-        <View
-          style={{
-            backgroundColor: '#22272B',
-            padding: 14,
-            borderRadius: 12,
-            borderLeftWidth: 4,
-            borderLeftColor: '#64B5F6',
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ color: '#64B5F6', fontWeight: '700', fontSize: 12, marginBottom: 4 }}>
-            EXAM RELEVANCE
-          </Text>
-          <Text style={{ color: '#B0BEC5', fontSize: 13, lineHeight: 18 }}>
-            Relevant for General Awareness & Financial Policy sections in upcoming IBPS, SBI, and SSC exams.
-          </Text>
-        </View>
-
-        {/* Action Button */}
-        <TouchableOpacity
-          onPress={() => setSelectedBrief(null)}
-          style={{
-            backgroundColor: '#2E7D32',
-            paddingVertical: 14,
-            borderRadius: 12,
-            alignItems: 'center',
-            marginBottom: 16,
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' }}>
-            Mark as Understood ✓
-          </Text>
-        </TouchableOpacity>
+        {/* Simple Dismiss Button */}
+          <TouchableOpacity 
+            onPress={() => setSelectedBrief(null)} 
+            style={{ marginTop: 24, paddingVertical: 14, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#888888', fontSize: 16, fontWeight: 'bold' }}>
+              Close
+            </Text>
+          </TouchableOpacity>
       </ScrollView>
     </View>
   </View>
@@ -537,8 +554,8 @@ fetchBriefs();
           <View style={styles.quizCenterScreen}>
             <Text style={styles.quizStartTitle}>Daily Check</Text>
             <Text style={styles.quizStartSub}>10 Questions • Mixed Syllabus</Text>
-            <Text style={styles.quizDifficultyText}>Offline Mode</Text>
-            <TouchableOpacity onPress={beginNetworkFetch} style={styles.primaryActionButton}>
+            <Text style={styles.quizDifficultyText}>Live Internet Mode</Text>
+            <TouchableOpacity onPress={() => setQuizStarted(true)} style={styles.primaryActionButton}>
               <Text style={styles.primaryActionText}>Begin Challenge</Text>
             </TouchableOpacity>
           </View>
@@ -571,7 +588,7 @@ fetchBriefs();
           <View style={styles.quizHeader}>
             <View>
               <Text style={styles.questionCounter}>QUESTION {currentQuestion + 1} OF {liveQuestions.length}</Text>
-              <Text style={[styles.difficultyIndicator, { color: '#0066FF' }]}>MATH / REASONING</Text>
+              <Text style={[styles.difficultyIndicator, { color: '#0066FF' }]}>MATH / REASONING / GK / CURRENT AFFAIRS</Text>
             </View>
             <TouchableOpacity onPress={resetQuiz}><Text style={styles.quitText}>Quit</Text></TouchableOpacity>
           </View>
@@ -644,8 +661,14 @@ fetchBriefs();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={[styles.header, isTablet && styles.tabletCenter]}>
-        <View style={styles.avatarPlaceholder}><Text style={styles.avatarText}>JD</Text></View>
+      <View style={[styles.header, isTablet && styles.tabletCenter, { paddingTop: 50 }]}>
+        <TouchableOpacity 
+  style={styles.avatarPlaceholder} 
+  activeOpacity={0.7}
+  onPress={() => setProfileVisible(true)}
+>
+  <Text style={styles.avatarText}>MG</Text>
+</TouchableOpacity>
         <Text style={styles.headerTitle}>FRMless</Text>
       </View>
 
@@ -661,11 +684,129 @@ fetchBriefs();
           </View>
         </View>
       )}
+      <Modal
+        visible={isProfileVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setProfileVisible(false)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.profileSheet}>
+  <View style={{ padding: 20 }}>
+    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 20 }}>Settings</Text>
+    
+    {/* Setting Option 1 */}
+    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+      <Feather name="user" size={20} color="#FFD52A" />
+      <Text style={{ color: '#FFFFFF', fontSize: 16, marginLeft: 15 }}>Edit Profile</Text>
+    </TouchableOpacity>
+
+    {/* Setting Option 2 */}
+    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+      <Feather name="bell" size={20} color="#FFD52A" />
+      <Text style={{ color: '#FFFFFF', fontSize: 16, marginLeft: 15 }}>Notifications</Text>
+    </TouchableOpacity>
+
+    {/* Setting Option 3 */}
+    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+      <Feather name="moon" size={20} color="#FFD52A" />
+      <Text style={{ color: '#FFFFFF', fontSize: 16, marginLeft: 15 }}>Dark Mode</Text>
+    </TouchableOpacity>
+
+    {/* Logout Button */}
+    <TouchableOpacity 
+      style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#333' }}
+      onPress={() => setProfileVisible(false)}
+    >
+      <Feather name="log-out" size={20} color="#FF4444" />
+      <Text style={{ color: '#FF4444', fontSize: 16, marginLeft: 15 }}>Log Out</Text>
+    </TouchableOpacity>
+  </View>
+</TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
+
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'transparent',
+  },
+  profileSheet: {
+    backgroundColor: '#1c1c1e',
+    padding: 25,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#444',
+    borderRadius: 3,
+    marginBottom: 25,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  profileName: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  profileTarget: {
+    color: '#8e8e93',
+    fontSize: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 30,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#2c2c2e',
+    padding: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  statValue: {
+    color: '#FFD700',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  statLabel: {
+    color: '#a1a1a6',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  closeButton: {
+    backgroundColor: '#3a3a3c',
+    paddingVertical: 16,
+    borderRadius: 15,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   container: { flex: 1, backgroundColor: '#F5F5F7' },
   tabletCenter: { maxWidth: 600, width: '100%', alignSelf: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
