@@ -23,7 +23,6 @@ async function fetchDailyBriefs() {
         published_date: new Date(item.pubDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
       };
     });
-    });
 
     console.log("🧹 Clearing yesterday's briefs from the database...");
     await supabase.from('daily_briefs').delete().neq('id', 0);
