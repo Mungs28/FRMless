@@ -11,20 +11,18 @@ async function fetchDailyBriefs() {
   try {
     const parser = new Parser();
     
-    // Targeted RSS search specifically for Indian Current Affairs, GK, and Exams
-    const feed = await parser.parseURL('https://news.google.com/rss/search?q=Current+Affairs+OR+General+Knowledge+India&hl=en-IN&gl=IN&ceid=IN:en');
+    // Fetch from a source that provides real descriptive paragraphs for exam prep
+    const feed = await parser.parseURL('https://indianexpress.com/section/explained/feed/');
     
     // Extract the top 20 most recent headlines
     const briefs = feed.items.slice(0, 20).map(item => {
-      // Clean up the title by removing the publisher name at the end
-      const cleanTitle = item.title.split(' - ')[0];
-      
       return {
-        title: cleanTitle.substring(0, 100),
+        title: item.title.substring(0, 100),
         summary: item.contentSnippet ? item.contentSnippet.substring(0, 500) + '...' : 'Tap to read the full GK/Current Affairs update.',
         link: item.link,
         published_date: new Date(item.pubDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
       };
+    });
     });
 
     console.log("🧹 Clearing yesterday's briefs from the database...");
